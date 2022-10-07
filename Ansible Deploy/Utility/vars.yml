@@ -1,0 +1,12 @@
+---
+config_dir: '~'
+
+# Docker group
+docker_group: docker
+docker_compose_version: 1.25.1-rc1
+
+# proxy vars
+network: proxy
+
+# portainer
+portainer_enable: true
