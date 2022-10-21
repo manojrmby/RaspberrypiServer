@@ -1,0 +1,228 @@
+version: "2.1"
+services:
+  samba:
+    image: dperson/samba:armhf
+    hostname: ${DOCKERHOSTNAME}
+    ports:
+      - ${SAMBA_PORT7}:137/udp
+      - ${SAMBA_PORT8}:138/udp
+      - ${SAMBA_PORT9}:139
+      - ${SAMBA_PORT5}:445
+    container_name: samba
+    environment:
+      - GROUPID=${PGID}
+      - NMBD=${SAMBA_NMBD}
+      - SHARE=${SAMBA_SHARENAME};/${SAMBA_SHARENAME};yes;no;no;all;${SAMBA_USERNAME}
+      - TZ=${TZ}
+      - USER=${SAMBA_USERNAME};${SAMBA_PASSWORD}
+      - USERID=${PUID}
+      - WORKGROUP=${SAMBA_WORKGROUP}
+    logging:
+      driver: json-file
+      options:
+        max-file: ${DOCKERLOGGING_MAXFILE}
+        max-size: ${DOCKERLOGGING_MAXSIZE}
+    restart: ${RESTART}
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${DOCKERCONFDIR}:/${SAMBA_SHARENAME}/config
+      - ${DOCKERSTORAGEDIR}:/${SAMBA_SHARENAME}/storage
+      - ${DOCKERSTORAGEDIR}:/storage
+      - /mnt/hdd:/NAS
+  
+  dozzle:
+    image: amir20/dozzle
+    hostname: ${DOCKERHOSTNAME}
+    ports:
+      - ${DOZZLE_PORT}:8080
+    container_name: dozzle_test
+    environment:
+      - DOZZLE_BASE=${DOZZLE_BASE}
+      - DOZZLE_FILTER=${DOZZLE_FILTER}
+      - DOZZLE_LEVEL=${DOZZLE_LEVEL}
+      - DOZZLE_TAILSIZE=${DOZZLE_TAILSIZE}
+      - PGID=${PGID}
+      - PUID=${PUID}
+      - TZ=${TZ}
+    logging:
+      driver: json-file
+      options:
+        max-file: ${DOCKERLOGGING_MAXFILE}
+        max-size: ${DOCKERLOGGING_MAXSIZE}
+    restart: ${RESTART}
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${DOCKERSTORAGEDIR}:/storage
+  
+  netdata:
+    image: netdata/netdata
+    hostname: ${DOCKERHOSTNAME}
+    ports:
+        - ${NETDATA_PORT}:19999
+    cap_add:
+        - SYS_PTRACE
+    container_name: netdata_test
+    environment:
+       - PGID=${DOCKERGID}
+       - TZ=${TZ}
+    logging:
+      driver: json-file
+      options:
+        max-file: ${DOCKERLOGGING_MAXFILE}
+        max-size: ${DOCKERLOGGING_MAXSIZE}
+    restart: ${RESTART}
+    security_opt:
+        - apparmor:unconfined
+    volumes:
+        - /etc/group:/host/etc/group:ro
+        - /etc/localtime:/etc/localtime:ro
+        - /etc/lsb-release:/host/etc/lsb-release:ro
+        - /etc/os-release:/host/etc/os-release:ro
+        - /etc/passwd:/host/etc/passwd:ro
+        - /proc:/host/proc:ro
+        - /sys:/host/sys:ro
+        - /var/run/docker.sock:/var/run/docker.sock:ro
+        - ${DOCKERSTORAGEDIR}:/storage
+    
+  heimdall:
+    image: lscr.io/linuxserver/heimdall
+    hostname: ${DOCKERHOSTNAME}
+    ports:
+      - ${HEIMDALL_PORT5}:443
+      - ${HEIMDALL_PORT0}:80
+    container_name: heimdall_test
+    environment:
+      - PGID=${PGID}
+      - PUID=${PUID}
+      - TZ=${TZ}
+    logging:
+      driver: json-file
+      options:
+        max-file: ${DOCKERLOGGING_MAXFILE}
+        max-size: ${DOCKERLOGGING_MAXSIZE}
+    
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${DOCKERCONFDIR}/heimdall:/config
+      - ${DOCKERSTORAGEDIR}:/storage
+    restart: ${RESTART}
+    
+  code-server:
+    image: lscr.io/linuxserver/code-server
+    container_name: code-server
+    environment:
+      - PGID=${PGID}
+      - PUID=${PUID}
+      - TZ=${TZ}
+      # - PASSWORD=password #optional
+      # - HASHED_PASSWORD= #optional
+      # - SUDO_PASSWORD=password #optional
+      # - SUDO_PASSWORD_HASH= #optional
+      # - PROXY_DOMAIN=code-server.my.domain #optional
+      # - DEFAULT_WORKSPACE=/config/workspace #optional
+    volumes:
+      - ${DOCKERCONFDIR}/code-server:/config
+    ports:
+      - ${CODESERVER_PORT}:8443
+    restart: ${RESTART}
+    
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent
+    hostname: ${DOCKERHOSTNAME}
+    ports:
+      - ${QBITTORRENT_PORT3}:51413
+      - ${QBITTORRENT_PORT3}:51413/udp
+      - ${QBITTORRENT_PORT1}:6881
+      - ${QBITTORRENT_PORT1}:6881/udp
+      - ${QBITTORRENT_PORT8}:8080
+    container_name: qbittorrent_test
+    environment:
+      - PGID=${PGID}
+      - PUID=${PUID}
+      - TZ=${TZ}
+      - WEBUI_PORT=8080
+    logging:
+      driver: json-file
+      options:
+        max-file: ${DOCKERLOGGING_MAXFILE}
+        max-size: ${DOCKERLOGGING_MAXSIZE}
+    restart: ${RESTART}
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${DOCKERCONFDIR}/qBittorrent:/config
+      - ${DOCKERSTORAGEDIR}:/storage
+      - /mnt/hdd/NAS/NEW:/downloads
+      - /mnt/hdd/NAS/DockerFiles/qbittorrent:/local
+      - /mnt/hdd/NAS/DockerFiles/qbittorrent/torrentmonitor:/torrentmonitor
+  
+  jackett:
+    image: lscr.io/linuxserver/jackett
+    hostname: ${DOCKERHOSTNAME}
+    ports:
+      - ${JACKETT_PORT}:9117
+    container_name: jackett_test
+    environment:
+      - PGID=${PGID}
+      - PUID=${PUID}
+      - TZ=${TZ}
+    logging:
+      driver: json-file
+      options:
+        max-file: ${DOCKERLOGGING_MAXFILE}
+        max-size: ${DOCKERLOGGING_MAXSIZE}
+    restart: ${RESTART}
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${DOCKERCONFDIR}/jackett:/config
+      - ${DOCKERSTORAGEDIR}:/storage
+      
+  sonarr:
+    image: lscr.io/linuxserver/sonarr
+    hostname: ${DOCKERHOSTNAME}
+    ports:
+      - ${SONARR_PORT}:8989
+    container_name: sonarr_test
+    environment:
+      - PGID=${PGID}
+      - PUID=${PUID}
+      - TZ=${TZ}
+    logging:
+      driver: json-file
+      options:
+        max-file: ${DOCKERLOGGING_MAXFILE}
+        max-size: ${DOCKERLOGGING_MAXSIZE}
+    restart: ${RESTART}
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${DOCKERCONFDIR}/sonarr:/config
+      - ${DOCKERSTORAGEDIR}:/storage
+      
+  radarr:
+    image: lscr.io/linuxserver/radarr
+    hostname: ${DOCKERHOSTNAME}
+    ports:
+      - ${RADARR_PORT}:7878
+    container_name: radarr_test
+    environment:
+      - PGID=${PGID}
+      - PUID=${PUID}
+      - TZ=${TZ}
+    logging:
+      driver: json-file
+      options:
+        max-file: ${DOCKERLOGGING_MAXFILE}
+        max-size: ${DOCKERLOGGING_MAXSIZE}
+    restart: ${RESTART}
+    volumes:
+      - ${DOCKERCONFDIR}/radarr:/config
+      #- /path/to/movies:/movies #optional
+      - ${DOCKERSTORAGEDIR}/downloads:/downloads #optional
+      
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --interval 86400  
+    restart: ${RESTART}
